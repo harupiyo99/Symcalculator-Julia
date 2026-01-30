@@ -11,15 +11,14 @@ using Latexify
     @in compute = false   
     @out res_latex = "2x + \\cos(x)"
 
-    # ボタンが押された（computeがtrueになった）瞬間に動く魔法
+    # ボタンが押された（computeがtrueになった）とき動く
     @onbutton compute begin
         try
-            # 1. 独立変数を明示的に定義
+            # 1. 独立変数を明示的にMainに定義
             Main.eval(:(@variables x))
             
             # 2. 文字列を Julia の数式にパースする
-            # Meta.parse で式にし、それを eval で評価します
-            # ※これが現在の Julia で最も汎用的な「文字列 → 数式」変換です
+            # Meta.parse で式にし、それを eval で評価する
             clean_input = strip(input_expr)
             parsed_expr = Base.eval(Main, Meta.parse(clean_input))
 
@@ -30,8 +29,8 @@ using Latexify
             res_latex = latexify(der).s
         catch e
             @show e
-            # エラーの種類をブラウザに出してデバッグを助ける
-            res_latex = "Error: $(e). 5*x のように入力してみて！"
+            # エラーの種類をブラウザに出して修正を助ける
+            res_latex = "Error: $(e). 5*x のように入力してください"
         end
     end
 end
@@ -48,7 +47,7 @@ function ui()
             h2(class="text-primary text-center", "Julia 代数電卓"),
             textfield("計算したい式を入力", :input_expr, filled=true),
             
-            # clickを確実に届けるためのボタン設定
+            # 確実なclickのボタン設定
             button("計算", @click("compute = true"), color="primary", class="full-width q-mt-md"),
             
             hr(class="q-my-lg"),
@@ -59,7 +58,7 @@ function ui()
     ]
 end
 
-# WSL2の壁を越える設定
+# WSL2の接続の設定
 Genie.config.server_host = "0.0.0.0"
 @page("/", ui)
 up(9000)
