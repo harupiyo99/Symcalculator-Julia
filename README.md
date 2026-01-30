@@ -5,6 +5,9 @@ JuliaとGenieFrameworkを活用した、Webブラウザ上で動作する代数�
 ## 目的
 代数計算を、ブラウザ上で行いたいので作っています。
 
+## 課題点
+「計算」ボタンを押しても、結果が変わる気配がありません。
+
 ## 使用技術
 - **Language**: Julia v1.10+
 - **Framework**: GenieFramework.jl (Stipple, StippleUI)
