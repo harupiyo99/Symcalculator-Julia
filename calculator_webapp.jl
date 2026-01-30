@@ -1,4 +1,5 @@
-# 計算ボタンは表示できるようになりましたが、それを押してもまだ答えの値が変わりません。したがって、まずはこの部分を改善する予定です。
+# Main空間へ変数xを直接登録することで、計算実行ボタンをいくら押しても反応しない状況を解決しました。
+# これにより、とりあえず式を入力し、微分した式をLaTeX形式で出力するところまではいけました。
 
 using GenieFramework
 using Symbolics
@@ -10,65 +11,56 @@ using Latexify
     @in compute = false   
     @out res_latex = "2x + \\cos(x)"
 
+    # ボタンが押された（computeがtrueになった）瞬間に動く魔法
     @onbutton compute begin
-        compute || return        # false のときは何もしない
-        compute = false          # 押下後にリセット
         try
-            @variables x
-            expr = Symbolics.parse(strip(input_expr))
-            der = expand_derivatives(Differential(x)(expr))
+            # 1. 独立変数を明示的に定義
+            Main.eval(:(@variables x))
+            
+            # 2. 文字列を Julia の数式にパースする
+            # Meta.parse で式にし、それを eval で評価します
+            # ※これが現在の Julia で最も汎用的な「文字列 → 数式」変換です
+            clean_input = strip(input_expr)
+            parsed_expr = Base.eval(Main, Meta.parse(clean_input))
+
+            # 3. 微分を実行
+            der = expand_derivatives(Differential(Main.x)(parsed_expr))
+            
+            # 4. LaTeX文字列に変換
             res_latex = latexify(der).s
-        catch
-            res_latex = "Error: 数式が不完全です"
+        catch e
+            @show e
+            # エラーの種類をブラウザに出してデバッグを助ける
+            res_latex = "Error: $(e). 5*x のように入力してみて！"
         end
     end
 end
 
 function ui()
     [
+        # LaTeX表示用のエンジン
         script(src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"),
-
-        style("""
-        body {
-            background: #f4f7f9;
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            padding-top: 50px;
-        }
-        .card {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 500px;
-        }
-        """),
+        
+        style("body { background: #f0f2f5; padding-top: 50px; font-family: sans-serif; }
+               .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 500px; margin: auto; }"),
 
         section(class="card", [
-            h2(class="text-primary", "Julia 代数電卓"),
-
-            textfield("数式を入力 (例: x^3)", :input_expr, filled=true),
-
-            button(
-                "計算",
-                click = "compute",
-                color="primary"
-            ),
-            hr(class="q-my-md"),
-
-            p(class="text-grey-7", "微分結果:"),
-
-            h3(v__text=:res_latex, class="text-secondary")
+            h2(class="text-primary text-center", "Julia 代数電卓"),
+            textfield("計算したい式を入力", :input_expr, filled=true),
+            
+            # clickを確実に届けるためのボタン設定
+            button("計算", @click("compute = true"), color="primary", class="full-width q-mt-md"),
+            
+            hr(class="q-my-lg"),
+            p(class="text-red-7", "計算結果:"),
+            # 変数の変化をリアルタイムに表示
+            h3(v__text=:res_latex, class="text-secondary text-center")
         ])
     ]
 end
 
-
-@page("/", ui)
-
-# WSL2の壁を壊す設定
+# WSL2の壁を越える設定
 Genie.config.server_host = "0.0.0.0"
+@page("/", ui)
 up(9000)
 wait()
